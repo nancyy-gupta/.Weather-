@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Responsive Weather App</title>
+  <style>
+    :root{
+      --bg:#f0f4f8; --card:#ffffff; --text:#0f1724; --muted:#6b7280; --accent:#0ea5a4;
+    }
+    [data-theme="dark"]{
+      --bg:#0b1220; --card:#071022; --text:#e6eef6; --muted:#9aa6b2; --accent:#34d399;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,var(--bg),#e6f2f7);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+
+    .app{width:100%;max-width:980px}
+    .top{display:flex;gap:12px;align-items:center;margin-bottom:18px}
+    .search{flex:1;display:flex;gap:8px}
+    input[type="search"]{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(15,23,36,0.08);background:var(--card);color:var(--text);outline:none;font-size:16px}
+    button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:white;font-weight:600;cursor:pointer}
+    .controls{display:flex;gap:8px}
+    .toggle{display:inline-flex;align-items:center;gap:8px;background:var(--card);padding:8px;border-radius:999px;border:1px solid rgba(15,23,36,0.06)}
+    label{font-size:14px;color:var(--muted)}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,0.7),rgba(255,255,255,0.35));backdrop-filter:blur(6px);border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
+    [data-theme="dark"] .card{background:linear-gradient(180deg,rgba(10,14,22,0.6),rgba(8,12,18,0.5));box-shadow:0 6px 18px rgba(2,6,23,0.5)}
+
+    .main-grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
+    @media (max-width:880px){.main-grid{grid-template-columns:1fr}}
+
+    .current{display:flex;align-items:center;gap:16px}
+    .icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;font-size:56px}
+    .details{flex:1}
+    .temp{font-size:46px;font-weight:700}
+    .cond{font-size:18px;color:var(--muted);margin-top:6px}
+    .meta{display:flex;gap:12px;margin-top:12px;color:var(--muted);font-size:14px}
+
+    .forecast-list{display:flex;gap:8px;overflow:auto;padding:6px 2px}
+    .day{min-width:92px;text-align:center;padding:12px;border-radius:10px;background:rgba(255,255,255,0.5)}
+    [data-theme="dark"] .day{background:rgba(255,255,255,0.03)}
+    .day strong{display:block}
+
+    .right{display:flex;flex-direction:column;gap:12px}
+    .hourly{display:flex;flex-direction:column;gap:8px}
+    .hour-row{display:flex;justify-content:space-between;padding:8px;border-radius:8px}
+
+    .aqi{font-size:14px}
+
+
+    .weather-bg{position:fixed;inset:0;z-index:-1;pointer-events:none}
+    .weather-bg .sun{position: absolute;right:10%;top:5%;width:160px;height:160px;border-radius:50%;filter:blur(18px);opacity:0.6}
+    .weather-bg .cloud{position:absolute;left:10%;top:12%;width:260px;height:80px;border-radius:40px;background:rgba(255,255,255,0.6);filter:blur(6px)}
+    .rain{position:absolute;inset:0;background-image:linear-gradient(transparent,rgba(0,0,0,0.02));}
+
+    .muted{color:var(--muted)}
+    .center{display:flex;align-items:center;justify-content:center}
+
+    footer{margin-top:8px;color:var(--muted);font-size:13px;text-align:center}
+  </style>
+</head>
+<body data-theme="light">
+  <div class="weather-bg" id="bg"></div>
+  <div class="app">
+    <div class="top">
+      <div class="search">
+        <input id="cityInput" type="search" placeholder="Search city e.g. New Delhi, London" />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div class="controls">
+        <div class="toggle">
+          <label for="unitToggle">°C / °F</label>
+          <select id="unitToggle" title="Units">
+            <option value="metric">Celsius</option>
+            <option value="imperial">Fahrenheit</option>
+          </select>
+        </div>
+        <div class="toggle">
+          <label for="themeToggle">Theme</label>
+          <select id="themeToggle">
+            <option value="auto">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div>
+        <div class="card" id="currentCard">
+          <div class="current">
+            <div class="icon" id="weatherIcon">☀️</div>
+            <div class="details">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div>
+                  <div class="temp" id="temp">--°</div>
+                  <div class="cond" id="condition">--</div>
+                </div>
+                <div style="text-align:right">
+                  <div id="location" class="muted">--</div>
+                  <div id="localTime" class="muted" style="font-size:13px;margin-top:6px">--</div>
+                </div>
+              </div>
+
+              <div class="meta" id="meta">
+                <div>Humidity: <span id="humidity">--</span></div>
+                <div>Wind: <span id="wind">--</span></div>
+                <div>Feels: <span id="feels">--</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4 style="margin:0 0 10px 0">5-day Forecast</h4>
+          <div id="forecast" class="forecast-list"></div>
+        </div>
+
+        <div class="card">
+          <h4 style="margin:0 0 10px 0">Hourly (Today)</h4>
+          <div id="hourly" class="forecast-list"></div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="card">
+          <h4 style="margin:0 0 10px 0">Air Quality</h4>
+          <div id="aqiBlock">Loading AQI...</div>
+        </div>
+
+        <div class="card">
+          <h4 style="margin:0 0 10px 0">Other Info</h4>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div>Sunrise: <span id="sunrise">--</span></div>
+            <div>Sunset: <span id="sunset">--</span></div>
+            <div>Pressure: <span id="pressure">--</span> hPa</div>
+            <div>Visibility: <span id="visibility">--</span> m</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4 style="margin:0 0 10px 0">Notes</h4>
+          <div style="font-size:14px;color:var(--muted)">Use the city search above. Toggle units and theme. Background and icons adapt to conditions.</div>
+        </div>
+      </div>
+    
+
+  <script>
+
+const API_KEY = "94ebc5c1aff3441fbf4111212252811";
+
+function applyAutoTheme() {
+  const hour = new Date().getHours();
+  document.body.setAttribute("data-theme", hour >= 18 || hour < 6 ? "dark" : "light");
+}
+
+function showLoading() {
+  document.getElementById("temp").textContent = "Loading...";
+  document.getElementById("condition").textContent = "Fetching data...";
+}
+
+function fetchByLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      const url = `http://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${pos.coords.latitude},${pos.coords.longitude}&days=5&aqi=yes`;
+      const data = await (await fetch(url)).json();
+      updateUI(data);
+    });
+  }
+}
+
+async function fetchWeather(city) {
+  const url = `http://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city}&days=5&aqi=yes`;
+  const res = await fetch(url);
+  return await res.json();
+}
+
+function updateBackground(cond) {
+  const bg = document.getElementById("bg");
+  bg.innerHTML = "";
+
+  if (cond.includes("rain")) bg.innerHTML = '<div class="rain"></div>';
+  else if (cond.includes("cloud")) bg.innerHTML = '<div class="cloud"></div>';
+  else bg.innerHTML = '<div class="sun"></div>';
+}
+
+function updateUI(data) {
+  document.getElementById("location").textContent = data.location.name + ", " + data.location.country;
+  document.getElementById("localTime").textContent = data.location.localtime;
+
+  document.getElementById("temp").textContent = data.current.temp_c + "°C";
+  document.getElementById("condition").textContent = data.current.condition.text;
+  document.getElementById("humidity").textContent = data.current.humidity + "%";
+  document.getElementById("wind").textContent = data.current.wind_kph + " km/h";
+  document.getElementById("feels").textContent = data.current.feelslike_c + "°C";
+  document.getElementById("weatherIcon").innerHTML = `<img src="https:${data.current.condition.icon}" width="90" />`;
+
+  updateBackground(data.current.condition.text.toLowerCase());
+
+  // 5-DAY FORECAST
+  let forecastHTML = "";
+  data.forecast.forecastday.forEach(day => {
+    forecastHTML += `
+      <div class="day">
+        <strong>${day.date}</strong>
+        <img src="https:${day.day.condition.icon}" width="48" />
+        <div>${day.day.maxtemp_c}° / ${day.day.mintemp_c}°</div>
+        <small>${day.day.condition.text}</small>
+      </div>`;
+  });
+  document.getElementById("forecast").innerHTML = forecastHTML;
+
+  // HOURLY FORECAST
+  let hourlyHTML = "";
+  data.forecast.forecastday[0].hour.forEach(h => {
+    hourlyHTML += `
+      <div class="day">
+        <strong>${h.time.split(" ")[1]}</strong>
+        <img src="https:${h.condition.icon}" width="32" />
+        <div>${h.temp_c}°C</div>
+      </div>`;
+  });
+  document.getElementById("hourly").innerHTML = hourlyHTML;
+
+
+  if (data.current.air_quality) {
+    const aqi = Math.round(data.current.air_quality.pm2_5);
+    let aqiColor = aqi < 50 ? "green" : aqi < 100 ? "orange" : "red";
+    document.getElementById("aqiBlock").innerHTML = `<span style='color:${aqiColor};font-weight:bold'>PM2.5: ${aqi}</span>`;
+  }
+
+  
+  document.getElementById("sunrise").textContent = data.forecast.forecastday[0].astro.sunrise;
+  document.getElementById("sunset").textContent = data.forecast.forecastday[0].astro.sunset;
+  document.getElementById("pressure").textContent = data.current.pressure_mb;
+  document.getElementById("visibility").textContent = data.current.vis_km * 1000;
+}
+
+
+document.getElementById("searchBtn").addEventListener("click", async () => {
+  const city = document.getElementById("cityInput").value;
+  showLoading();
+  const data = await fetchWeather(city);
+  updateUI(data);
+});
+
+document.getElementById("themeToggle").addEventListener("change", (e) => {
+const theme = e.target.value;
+if (theme === "auto") {
+applyAutoTheme();
+} else {
+document.body.setAttribute("data-theme", theme);
+}
+});
+
+
+applyAutoTheme();
+fetchByLocation();
+</script>
+</body>
+</html>
+
